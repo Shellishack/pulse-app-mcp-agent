@@ -1,8 +1,8 @@
 {
   "name": "mcp_agent",
-  "displayName": "Pulse App Template",
-  "description": "A template for creating Pulse App",
-  "version": "0.0.1",
+  "displayName": "MCP Agent Node",
+  "description": "Agent node for interacting with MCP tools and Pulse Apps.",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {

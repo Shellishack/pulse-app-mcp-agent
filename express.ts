@@ -9,6 +9,8 @@ import dotenv from "dotenv";
 import livereload from "livereload";
 import connectLivereload from "connect-livereload";
 import { networkInterfaces } from "os";
+import { pipeline, Readable } from "stream";
+import { promisify } from "util";
 
 dotenv.config({
   quiet: true,
@@ -50,12 +52,16 @@ app.use((req, res, next) => {
   return next();
 });
 
-app.use("/.server-function", express.static("dist/server"));
+// Serve backend
+app.use(
+  `/${pulseConfig.id}/${pulseConfig.version}/server`,
+  express.static("dist/server")
+);
+// Catch backend function calls
 app.all(/^\/server-function\/(.*)/, async (req, res) => {
   const func = req.params[0];
 
   const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-
   // Convert Express req -> Fetch Request
   const request = new Request(url, {
     method: req.method,
@@ -76,13 +82,16 @@ app.all(/^\/server-function\/(.*)/, async (req, res) => {
     pulseConfig.version
   );
 
+  const streamPipeline = promisify(pipeline);
+
   // If loadAndCall returns a Response (Fetch API Response)
-  if (response instanceof Response) {
-    res.status(response.status);
-    response.headers.forEach((v, k) => res.setHeader(k, v));
-    res.send(await response.text());
+  if (response.body) {
+    // Convert WHATWG stream to Node.js stream
+    const nodeStream = Readable.fromWeb(response.body);
+    // Pipe it directly to Express
+    await streamPipeline(nodeStream, res);
   } else {
-    res.json(response);
+    res.end();
   }
 });
 
