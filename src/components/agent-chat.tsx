@@ -56,7 +56,11 @@ export default function AgentChat() {
 
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        setIsRunning(false);
+        controllerRef.current = null;
+        break;
+      }
       const chunk = JSON.parse(decoder.decode(value));
 
       console.log("Received chunk:", JSON.stringify(chunk, null, 2));
@@ -82,8 +86,6 @@ export default function AgentChat() {
         ]);
       }
     }
-    setIsRunning(false);
-    controllerRef.current = null;
   }
 
   return (

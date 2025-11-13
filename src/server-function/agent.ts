@@ -15,7 +15,37 @@ export default async function agent(req: Request) {
 
   const { userMessage } = await req.json();
 
-  const mcpClient = new MultiServerMCPClient({
+  let closed = false;
+  async function safeClose() {
+    if (closed) return;
+    closed = true;
+
+    // Close response controller
+    try {
+      responseController?.close();
+      responseController = null;
+    } catch {
+      // noop
+    }
+
+    // Close agent controller
+    try {
+      agentController?.abort();
+      agentController = null;
+    } catch {
+      // noop
+    }
+
+    // Close MCP client
+    try {
+      await mcpClient?.close();
+      mcpClient = null;
+    } catch {
+      // noop
+    }
+  }
+
+  let mcpClient: MultiServerMCPClient | null = new MultiServerMCPClient({
     "chrome-devtools": {
       transport: "stdio",
       command: "npx",
@@ -32,14 +62,20 @@ export default async function agent(req: Request) {
   });
 
   const agent = createAgent({ model, tools });
+
+  let agentController: AbortController | null = new AbortController();
   const stream = await agent.stream(
     { messages: [{ role: "user", content: userMessage }] },
-    { streamMode: "values" }
+    { streamMode: "values", signal: agentController?.signal,  }
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let responseController: ReadableStreamDefaultController<any> | null = null;
   const resultStream = new ReadableStream({
     async start(streamController) {
       try {
+        responseController = streamController;
+
         for await (const chunk of stream) {
           const latestMessage = chunk.messages.at(-1);
           if (latestMessage?.content) {
@@ -52,7 +88,7 @@ export default async function agent(req: Request) {
             console.log(`Calling tools: ${toolCallNames.join(", ")}`);
           }
 
-          streamController.enqueue(
+          responseController.enqueue(
             new TextEncoder().encode(
               JSON.stringify({
                 content: latestMessage?.content,
@@ -64,20 +100,16 @@ export default async function agent(req: Request) {
         }
       } catch (err) {
         console.error("Stream error:", err);
+        await safeClose();
       } finally {
-        await stream.cancel();
-        await resultStream.cancel();
-        await streamController.close();
-        await mcpClient.close();
         console.log("Stream closed.");
+        await safeClose();
       }
     },
 
     async cancel() {
       console.log("ReadableStream.cancel() called");
-      await stream.cancel();
-      await resultStream.cancel();
-      await mcpClient.close();
+      await safeClose();
     },
   });
 
