@@ -13,15 +13,35 @@ export default async function agent(req: Request) {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const { userMessage } = await req.json();
+  const {
+    userMessage,
+    mcpServers,
+  }: {
+    userMessage: string;
+    mcpServers: {
+      [key: string]: {
+        command: string;
+        args: string[];
+        type?: "stdio";
+      };
+    };
+  } = await req.json();
 
   let closed = false;
-  async function safeClose() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function safeClose(error?: any) {
     if (closed) return;
     closed = true;
 
     // Close response controller
     try {
+      // if there was an error, we can optionally send it to the client
+      if (error && responseController) {
+        responseController.enqueue(
+          new TextEncoder().encode(JSON.stringify({ error: error.message }))
+        );
+      }
+
       responseController?.close();
       responseController = null;
     } catch {
@@ -46,11 +66,7 @@ export default async function agent(req: Request) {
   }
 
   let mcpClient: MultiServerMCPClient | null = new MultiServerMCPClient({
-    "chrome-devtools": {
-      transport: "stdio",
-      command: "npx",
-      args: ["chrome-devtools-mcp@latest"],
-    },
+    mcpServers,
   });
 
   const tools = await mcpClient.getTools();
@@ -66,7 +82,7 @@ export default async function agent(req: Request) {
   let agentController: AbortController | null = new AbortController();
   const stream = await agent.stream(
     { messages: [{ role: "user", content: userMessage }] },
-    { streamMode: "values", signal: agentController?.signal,  }
+    { streamMode: "values", signal: agentController?.signal }
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,9 +114,12 @@ export default async function agent(req: Request) {
             )
           );
         }
-      } catch (err) {
+      } catch (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        err: any
+      ) {
         console.error("Stream error:", err);
-        await safeClose();
+        await safeClose(err);
       } finally {
         console.log("Stream closed.");
         await safeClose();
