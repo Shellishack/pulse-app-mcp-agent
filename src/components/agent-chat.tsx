@@ -45,7 +45,12 @@ export default function AgentChat() {
       headers: { "Content-Type": "application/json" },
       signal: controllerRef.current.signal,
     });
-    if (!response.body) {
+    if (!response.ok) {
+      console.error("Error from server:", response.statusText);
+      setIsRunning(false);
+      controllerRef.current = null;
+      return;
+    } else if (!response.body) {
       setIsRunning(false);
       controllerRef.current = null;
       return;
