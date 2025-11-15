@@ -8,6 +8,7 @@ export default function AgentChat() {
   const [inputContent, setInputContent] = useState("");
   const [messages, setMessages] = useState<
     {
+      timestamp: string;
       from: string;
       content: string;
     }[]
@@ -98,6 +99,7 @@ export default function AgentChat() {
     setMessages((prev) => [
       ...prev,
       {
+        timestamp: new Date().toLocaleTimeString(),
         from: "User",
         content: message,
       },
@@ -144,6 +146,7 @@ export default function AgentChat() {
         setMessages((prev) => [
           ...prev,
           {
+            timestamp: new Date().toLocaleTimeString(),
             from: "Agent",
             content: chunk.content,
           },
@@ -155,12 +158,20 @@ export default function AgentChat() {
         );
         setMessages((prev) => {
           const toolMessage = `Calling tools: ${toolCallNames.join(", ")}`;
-          return [...prev, { from: "Agent", content: toolMessage }];
+          return [
+            ...prev,
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              from: "Agent",
+              content: toolMessage,
+            },
+          ];
         });
       } else if (chunk?.finish_reason) {
         setMessages((prev) => [
           ...prev,
           {
+            timestamp: new Date().toLocaleTimeString(),
             from: "Agent",
             content: `Finished with reason: ${chunk.finish_reason}`,
           },
@@ -172,12 +183,12 @@ export default function AgentChat() {
   return (
     <div className="w-full h-full bg-content1 grid grid-rows-[max-content_1fr_max-content] text-content3-foreground">
       <div>
-        <div className="p-4 font-bold text-center">Agent Chat</div>
+        <div className="p-2 font-bold text-center">Agent Chat</div>
         {/* Display available tools */}
-        <div className="p-4">
+        <div className="px-4">
           <div className="bg-content2 text-content2-foreground rounded-2xl p-4">
             <strong>Registered MCP Servers:</strong>
-            <p>[{Object.keys(mcpServers.server).join(", ")}]</p>
+            <p>{`[${Object.keys(mcpServers.server).join(", ")}]`}</p>
           </div>
         </div>
       </div>
@@ -186,9 +197,15 @@ export default function AgentChat() {
         className="w-full h-full overflow-y-auto overflow-x-hidden"
       >
         {messages.map((msg, index) => (
-          <div key={index} className="p-4 border-b border-border2">
+          <div
+            key={msg.timestamp + "-" + index}
+            className="p-4 border-b border-border2"
+          >
             <p>
-              <strong>{msg.from}:</strong>
+              <strong>{msg.from}</strong>
+              <span className="ml-2 text-sm text-content3-foreground">
+                {msg.timestamp}
+              </span>
             </p>
             <p>{msg.content}</p>
           </div>
