@@ -2,7 +2,7 @@
   "name": "mcp_agent",
   "displayName": "MCP Agent Node",
   "description": "Agent node for interacting with MCP tools and Pulse Apps.",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,9 +31,9 @@
     "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@module-federation/enhanced": "0.19.1",
-    "@module-federation/node": "2.7.17",
-    "@module-federation/runtime": "0.19.1",
+    "@module-federation/enhanced": "^0.21.6",
+    "@module-federation/node": "^2.7.25",
+    "@module-federation/runtime": "^0.21.6",
     "@pulse-editor/cli": "^0.1.1-beta.7",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/cors": "^2.8.19",
