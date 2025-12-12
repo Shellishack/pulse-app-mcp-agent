@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repo is deprecated. This project is moved to monorepo: https://github.com/ClayPulse/official-pulse-apps
+
 ## Pulse App Template
 
 This is a React full-stack template which you can use to make your own Pulse Editor app. It uses Webpack Module Federation to share modules with Pulse Editor.
